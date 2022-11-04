@@ -40,12 +40,13 @@ export function calculateSlackness(users: User[]) {
     if (inWhiteList(user)) return;
     // If there is actually time logged we skip currently
     if (user?.timeEntry) return;
-    // If the user has a specific sort of leave we don't care about
-    if (user?.holiday?.leaveType.includes("Meeting")) return;
-    if (user?.holiday?.leaveType.includes("Conferences")) return;
-    if (user?.holiday?.leaveType.includes("Holiday")) return;
-    if (user?.holiday?.leaveType.includes("Sick Leave")) return;
-    if (user?.holiday?.leaveType.includes("Maternity")) return;
+    // If the user has a specific sort of absence that means
+    // we don't need to check
+    if (user?.absence?.leaveType.includes("Meeting")) return;
+    if (user?.absence?.leaveType.includes("Conferences")) return;
+    if (user?.absence?.leaveType.includes("Holiday")) return;
+    if (user?.absence?.leaveType.includes("Sick Leave")) return;
+    if (user?.absence?.leaveType.includes("Maternity")) return;
 
     user.needsReminding = true;
   });

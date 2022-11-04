@@ -17,6 +17,16 @@ export interface TimetasticHoliday {
   leaveType: string;
 }
 
+export interface Absence {
+  date: string;
+  userId: number;
+  startType: string;
+  endType: string;
+  reason: string;
+  status: string;
+  leaveType: string;
+}
+
 export type TTUser = Omit<User, "harvest_id">;
 
 const BASE_API_URL = "https://app.timetastic.co.uk/api";
@@ -44,7 +54,8 @@ export async function fetchTimetasticHolidays(date: string) {
     const holidays: TimetasticHoliday[] = json.holidays;
 
     return holidays.map((holiday: TimetasticHoliday) => {
-      const data: TimetasticHoliday = {
+      const data: Absence = {
+        date,
         userId: holiday.userId,
         startType: holiday.startType,
         endType: holiday.endType,
@@ -87,17 +98,17 @@ export async function fetchTimetasticUsers() {
 }
 
 export function addTimetasticData(
-  holidays: TimetasticHoliday[],
+  absences: Absence[],
   users: User[],
 ) {
-  holidays.forEach((holiday) => {
+  absences.forEach((absence) => {
     // find user in users list
     const userIndex = users.findIndex((user) =>
-      user.timetastic_id === holiday.userId
+      user.timetastic_id === absence.userId
     );
     // if not found then ignore
     if (userIndex === -1) return;
 
-    users[userIndex].holiday = holiday;
+    users[userIndex].absence = absence;
   });
 }

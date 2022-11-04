@@ -6,10 +6,10 @@ import {
   HarvestTimeEntry,
 } from "./src/harvest.ts";
 import {
+  Absence,
   addTimetasticData,
   fetchTimetasticHolidays,
   fetchTimetasticUsers,
-  TimetasticHoliday,
 } from "./src/timetastic.ts";
 import { calculateSlackness, mergeUsers } from "./src/utils.ts";
 
@@ -20,7 +20,7 @@ export interface User {
   harvest_id?: number;
   first_name: string;
   last_name: string;
-  holiday?: TimetasticHoliday;
+  absence?: Absence;
   timeEntry?: HarvestTimeEntry;
 }
 
