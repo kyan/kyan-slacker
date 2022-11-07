@@ -33,10 +33,20 @@ const options = {
   },
 };
 
-export async function fetchHarvestTimeEntries(date: string) {
-  const url = new URL(`${BASE_API_URL}/time_entries`);
-  url.searchParams.set("from", date);
-  url.searchParams.set("to", date);
+export async function fetchHarvestTimeEntries(
+  date: string,
+  data: HarvestTimeEntry[] = [],
+  nextLink?: string,
+): Promise<HarvestTimeEntry[]> {
+  let url: URL;
+
+  if (nextLink) {
+    url = new URL(nextLink);
+  } else {
+    url = new URL(`${BASE_API_URL}/time_entries`);
+    url.searchParams.set("from", date);
+    url.searchParams.set("to", date);
+  }
 
   const harvestRequest = new Request(url, options);
 
@@ -45,8 +55,8 @@ export async function fetchHarvestTimeEntries(date: string) {
     const json = await harvestResponse.json();
     const timeEntries: HarvestTimeEntry[] = json.time_entries;
 
-    return timeEntries.map((entry) => {
-      const data: HarvestTimeEntry = {
+    const requestResult = timeEntries.map((entry) => {
+      const item: HarvestTimeEntry = {
         spent_date: entry.spent_date,
         hours: entry.hours,
         notes: entry.notes,
@@ -56,8 +66,16 @@ export async function fetchHarvestTimeEntries(date: string) {
         },
       };
 
-      return data;
+      return item;
     });
+
+    const results = [...data, ...requestResult];
+
+    if (json.links.next) {
+      return await fetchHarvestTimeEntries(date, results, json.links.next);
+    } else {
+      return results;
+    }
   } catch (error) {
     console.error("fetching harvest users:", error);
     throw new Error("fetching harvest users!");
