@@ -47,6 +47,7 @@ export function calculateSlackness(users: User[]) {
     if (user?.absence?.leaveType.includes("Holiday")) return;
     if (user?.absence?.leaveType.includes("Sick Leave")) return;
     if (user?.absence?.leaveType.includes("Maternity")) return;
+    if (user?.absence?.leaveType.includes("Compassionate")) return;
 
     user.needsReminding = true;
   });
