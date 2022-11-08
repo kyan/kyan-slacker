@@ -3,28 +3,34 @@
 An API that merges Harvest and Timetastic data and currently gives a basic
 output:
 
+You can now use params: `start_date` and `end_date` to get a batch of results
+
 ```json
 {
-  "date": "2022-10-14",
-  "users": [
-    {
-      "needsReminding": false,
-      "timetastic_id": 123456,
-      "email": "foo@home.com",
-      "first_name": "Fred",
-      "last_name": "Spanner",
-      "harvest_id": 654321,
-      "timeEntry": {
-        "spent_date": "2022-10-14",
-        "hours": 0.5,
-        "notes": "Devops meeting",
-        "user": {
-          "id": 654321,
-          "name": "Fred Spanner"
+  "dates": {
+    "2022-12-01": {
+      "users": [
+        {
+          "needsReminding": true,
+          "timetastic_id": 12355,
+          "email": "foo@kyan.com",
+          "first_name": "Foo",
+          "last_name": "Bar",
+          "harvest_id": 6876876,
+          "timeEntries": []
+        },
+        {
+          "needsReminding": true,
+          "timetastic_id": 876876,
+          "email": "bar@kyan.com",
+          "first_name": "Bar",
+          "last_name": "Bas",
+          "harvest_id": 878768,
+          "timeEntries": []
         }
-      }
+      ]
     }
-  ]
+  }
 }
 ```
 
