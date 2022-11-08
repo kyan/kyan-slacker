@@ -1,6 +1,7 @@
 # Slacker
 
-An API that merges Harvest and Timetastic data and currently gives a basic output:
+An API that merges Harvest and Timetastic data and currently gives a basic
+output:
 
 ```json
 {
@@ -22,7 +23,7 @@ An API that merges Harvest and Timetastic data and currently gives a basic outpu
           "name": "Fred Spanner"
         }
       }
-    },
+    }
   ]
 }
 ```
