@@ -34,20 +34,32 @@ const userWhitelist = Deno.env.get("TIMETASTIC_WHITELIST")?.split(",");
 const inWhiteList = (user: User) =>
   user.timetastic_id && userWhitelist?.includes(String(user.timetastic_id));
 
+const absenceWhiteList = [
+  "meeting / conferences",
+  "holiday",
+  "sick leave",
+  "maternity",
+  "paternity",
+  "unpaid",
+  "kyan",
+  "day in lieu",
+  "compassionate",
+  "dependency",
+  "paid leave",
+  "xmas closure",
+];
+
 export function calculateSlackness(users: User[]) {
   users.forEach((user) => {
+    const leaveType = user?.absence?.leaveType.toLowerCase() || "";
+    const timeEntry = user?.timeEntry;
+
     // If the user is in the whitelist, ignore
     if (inWhiteList(user)) return;
     // If there is actually time logged we skip currently
-    if (user?.timeEntry) return;
-    // If the user has a specific sort of absence that means
-    // we don't need to check
-    if (user?.absence?.leaveType.includes("Meeting")) return;
-    if (user?.absence?.leaveType.includes("Conferences")) return;
-    if (user?.absence?.leaveType.includes("Holiday")) return;
-    if (user?.absence?.leaveType.includes("Sick Leave")) return;
-    if (user?.absence?.leaveType.includes("Maternity")) return;
-    if (user?.absence?.leaveType.includes("Compassionate")) return;
+    if (timeEntry) return;
+    // Skip if the user is one of these leave types
+    if (absenceWhiteList.includes(leaveType)) return;
 
     user.needsReminding = true;
   });
