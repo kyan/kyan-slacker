@@ -1,4 +1,5 @@
-import { User } from "../mod.ts";
+import groupBy from "https://deno.land/x/denodash@0.1.3/src/collection/groupBy.ts";
+import { BaseResults, User } from "../mod.ts";
 import { slugify } from "./utils.ts";
 
 export interface HarvestUser {
@@ -12,10 +13,11 @@ export interface HarvestTimeEntry {
   spent_date: string;
   hours: number;
   notes: string;
-  user: {
+  user?: {
     id: number;
     name: string;
   };
+  userID?: number | undefined;
 }
 
 export type HUser = Omit<User, "timetastic_id">;
@@ -27,14 +29,14 @@ const options = {
   method: "GET",
   headers: {
     "content-type": "application/json",
-    "Accept": "application/json",
+    Accept: "application/json",
     "Harvest-Account-Id": `${ACCOUNT_ID}`,
-    "Authorization": `Bearer ${API_KEY}`,
+    Authorization: `Bearer ${API_KEY}`,
   },
 };
 
 export async function fetchHarvestTimeEntries(
-  date: string,
+  queryRange: string[],
   data: HarvestTimeEntry[] = [],
   nextLink?: string,
 ): Promise<HarvestTimeEntry[]> {
@@ -44,8 +46,8 @@ export async function fetchHarvestTimeEntries(
     url = new URL(nextLink);
   } else {
     url = new URL(`${BASE_API_URL}/time_entries`);
-    url.searchParams.set("from", date);
-    url.searchParams.set("to", date);
+    url.searchParams.set("from", queryRange[0]);
+    url.searchParams.set("to", queryRange[queryRange.length - 1]);
   }
 
   const harvestRequest = new Request(url, options);
@@ -60,10 +62,7 @@ export async function fetchHarvestTimeEntries(
         spent_date: entry.spent_date,
         hours: entry.hours,
         notes: entry.notes,
-        user: {
-          id: entry.user.id,
-          name: entry.user.name,
-        },
+        userID: entry.user?.id,
       };
 
       return item;
@@ -72,7 +71,11 @@ export async function fetchHarvestTimeEntries(
     const results = [...data, ...requestResult];
 
     if (json.links.next) {
-      return await fetchHarvestTimeEntries(date, results, json.links.next);
+      return await fetchHarvestTimeEntries(
+        queryRange,
+        results,
+        json.links.next,
+      );
     } else {
       return results;
     }
@@ -110,15 +113,27 @@ export async function fetchHarvestUsers() {
   }
 }
 
-export function addHarvestData(timeEntries: HarvestTimeEntry[], users: User[]) {
-  timeEntries.forEach((entry) => {
-    // find user in users list
-    const userIndex = users.findIndex((user) =>
-      user.harvest_id === entry.user.id
-    );
-    // if not found then ignore
-    if (userIndex === -1) return;
+export function addHarvestData(
+  timeEntries: HarvestTimeEntry[],
+  dataGroupByDate: BaseResults,
+) {
+  const groupTimeEntries = groupBy((a) => a.spent_date, timeEntries);
+  const timeEntryKeys = Object.keys(groupTimeEntries);
 
-    users[userIndex].timeEntry = entry;
+  timeEntryKeys.forEach((k) => {
+    const entries = groupTimeEntries[k];
+    const lookup = dataGroupByDate[k];
+
+    if (!lookup) return;
+
+    lookup.users = [
+      ...lookup.users.map((user) => {
+        user.timeEntries = entries.filter(
+          (e) => e.spent_date === k && e.userID === user.harvest_id,
+        );
+
+        return user;
+      }),
+    ];
   });
 }

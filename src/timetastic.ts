@@ -1,5 +1,6 @@
-import { User } from "../mod.ts";
-import { slugify } from "./utils.ts";
+import { BaseResults, User } from "../mod.ts";
+import { dateRange, slugify } from "./utils.ts";
+import groupBy from "groupBy";
 
 export interface TimetasticUser {
   id: number;
@@ -9,7 +10,10 @@ export interface TimetasticUser {
 }
 
 export interface TimetasticHoliday {
+  id: number;
   userId: number;
+  startDate: string;
+  endDate: string;
   startType: string;
   endType: string;
   reason: string;
@@ -18,7 +22,7 @@ export interface TimetasticHoliday {
 }
 
 export interface Absence {
-  date: string;
+  id: number;
   userId: number;
   startType: string;
   endType: string;
@@ -35,16 +39,16 @@ const options = {
   method: "GET",
   headers: {
     "content-type": "application/json",
-    "Accept": "application/json",
-    "Authorization": `Bearer ${API_KEY}`,
+    Accept: "application/json",
+    Authorization: `Bearer ${API_KEY}`,
   },
 };
 
-export async function fetchTimetasticHolidays(date: string) {
+export async function fetchTimetasticHolidays(queryRange: string[]) {
   const url = new URL(`${BASE_API_URL}/holidays`);
   url.searchParams.set("NonArchivedUsersOnly", "true");
-  url.searchParams.set("Start", date);
-  url.searchParams.set("End", date);
+  url.searchParams.set("Start", queryRange[0]);
+  url.searchParams.set("End", queryRange[queryRange.length - 1]);
 
   const timetasticRequest = new Request(url, options);
 
@@ -53,19 +57,25 @@ export async function fetchTimetasticHolidays(date: string) {
     const json = await timetasticResponse.json();
     const holidays: TimetasticHoliday[] = json.holidays;
 
-    return holidays.map((holiday: TimetasticHoliday) => {
-      const data: Absence = {
-        date,
-        userId: holiday.userId,
-        startType: holiday.startType,
-        endType: holiday.endType,
-        reason: holiday.reason,
-        status: holiday.status,
-        leaveType: holiday.leaveType,
-      };
+    return holidays.reduce<{ [index: string]: Absence[] }>(function (r, a) {
+      const absenceRange = dateRange(a.startDate, a.endDate);
 
-      return data;
-    });
+      absenceRange.forEach((d) => {
+        if (!queryRange.includes(d)) return;
+        r[d] = r[d] || [];
+        r[d].push({
+          id: a.id,
+          userId: a.userId,
+          startType: a.startType,
+          endType: a.endType,
+          reason: a.reason,
+          status: a.status,
+          leaveType: a.leaveType,
+        });
+      });
+
+      return r;
+    }, Object.create(null));
   } catch (error) {
     console.error("fetching timetastic holidays:", error);
     throw new Error("fetching timetastic holidays!");
@@ -97,18 +107,28 @@ export async function fetchTimetasticUsers() {
   }
 }
 
-export function addTimetasticData(
-  absences: Absence[],
+export function addUsersToTimetasticData(
+  absences: { [index: string]: Absence[] },
   users: User[],
-) {
-  absences.forEach((absence) => {
-    // find user in users list
-    const userIndex = users.findIndex((user) =>
-      user.timetastic_id === absence.userId
-    );
-    // if not found then ignore
-    if (userIndex === -1) return;
+): BaseResults {
+  // deno-lint-ignore no-explicit-any
+  const data: any = {};
+  const dates = Object.keys(absences);
 
-    users[userIndex].absence = absence;
+  dates.forEach((date) => {
+    data[date] = groupBy((a) => a.userId, absences[date]);
+
+    users.forEach((user) => {
+      if (!user.timetastic_id) return;
+      data[date].users = data[date].users || [];
+
+      const userDupe = { ...user };
+      userDupe.absences = data[date][user.timetastic_id];
+      data[date].users.push(userDupe);
+
+      delete data[date][user.timetastic_id];
+    });
   });
+
+  return data;
 }
